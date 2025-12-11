@@ -1,0 +1,45 @@
+name: go_library
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  # Meningkatkan minimum SDK ke 3.0.0 untuk kompatibilitas modern
+  sdk: '>=3.0.0 <4.0.0' 
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # --- CORE DEPENDENSI ---
+  
+  # State Management
+  flutter_riverpod: ^2.5.1
+  
+  # Utilitas ID Unik (untuk buku dan pinjaman)
+  uuid: ^4.2.2 
+  
+  # Image Caching (untuk sampul buku)
+  cached_network_image: ^3.3.1 
+
+  # FIREBASE & GOOGLE SIGN-IN (Versi stabil dan teruji kompatibel)
+  firebase_core: ^2.24.2 
+  firebase_auth: ^4.15.3 
+  google_sign_in: ^6.1.6 
+  
+  # Utilitas UI
+  cupertino_icons: ^1.0.8
+  
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^3.0.1 # Menggunakan versi 3.x yang lebih kompatibel
+
+flutter:
+  uses-material-design: true
+
+  # Anda dapat mendeklarasikan folder assets di sini jika diperlukan
+  # assets:
+  #   - assets/images/

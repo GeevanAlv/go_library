@@ -1,15 +1,14 @@
-// lib/screens/book_detail_screen.dart
+// lib/screens/book_detail_screen.dart (FINAL CODE DENGAN ASYNCVALUE)
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import '../providers/book_provider.dart';
 import '../models/book_model.dart';
 import '../services/auth_service.dart';
-
-// ====================================================================
-// KELAS UTAMA
-// ====================================================================
+import '../theme/app_theme.dart'; // Import AppTheme
 
 class BookDetailScreen extends ConsumerWidget {
   final String bookId;
@@ -18,58 +17,79 @@ class BookDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Ambil data buku. Karena ini Provider.family, data buku pasti ada.
-    final book = ref.watch(bookByIdProvider(bookId)); 
+    // 1. Ambil data buku berdasarkan ID (menggunakan provider family)
+    // ✅ Sekarang mengamati AsyncValue<Book>
+    final bookAsync = ref.watch(bookByIdProvider(bookId));
     
-    // Ambil data pengguna
+    // 2. Ambil data pengguna saat ini
     final currentUser = ref.watch(authStateProvider).value;
     final currentUserId = currentUser?.uid;
     final isLibrarian = currentUser?.email == 'admin@library.com';
 
-    final isCurrentBorrower = book.borrowerId == currentUserId;
-    final canToggle = book.isAvailable || isCurrentBorrower || isLibrarian;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(book.title),
+    // 3. Tangani Status Data (Loading, Error, atau Data Tersedia)
+    return bookAsync.when(
+      loading: () => Scaffold(
+        appBar: AppBar(title: Text('Memuat...', style: GoogleFonts.poppins())),
+        body: const Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal)),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- HEADER: COVER & INFO RINGKAS (Panggilan function) ---
-            _BuildHeaderSection(book: book),
-            const Divider(height: 30),
-
-            // --- DESKRIPSI & SINOPSIS ---
-            Text('Sinopsis', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(book.description, style: Theme.of(context).textTheme.bodyMedium),
-            const Divider(height: 30),
-
-            // --- INFORMASI PINJAMAN (Panggilan function) ---
-            _BuildAvailabilityInfo(book: book, isCurrentBorrower: isCurrentBorrower),
-            const Divider(height: 30),
-
-            // --- TOMBOL AKSI (Panggilan function ConsumerWidget) ---
-            if (canToggle)
-              _BuildActionButton(book: book, isCurrentBorrower: isCurrentBorrower),
-              
-            const SizedBox(height: 20),
-
-            // Opsi Tambahan (Admin)
-            if (isLibrarian)
-              _BuildAdminActions(book: book),
-          ],
-        ),
+      error: (e, s) => Scaffold(
+        appBar: AppBar(title: Text('Error', style: GoogleFonts.poppins())),
+        body: Center(child: Text('Gagal memuat detail buku: $e', style: GoogleFonts.poppins(color: Colors.red))),
       ),
+      data: (book) {
+        // Data buku telah tersedia, sekarang kita bisa melanjutkan logika UI
+
+        // Cek apakah pengguna saat ini adalah peminjam buku ini
+        final isCurrentBorrower = book.borrowerId == currentUserId;
+        // Cek apakah pengguna dapat mengubah status (Meminjam/Mengembalikan)
+        final canToggle = book.isAvailable || isCurrentBorrower || isLibrarian;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(book.title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // --- HEADER: COVER & INFO RINGKAS ---
+                _BuildHeaderSection(book: book),
+                const Divider(height: 30),
+
+                // --- DESKRIPSI & SINOPSIS ---
+                Text('Sinopsis', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(book.description, style: GoogleFonts.poppins(fontSize: 14)),
+                const Divider(height: 30),
+
+                // --- INFORMASI PINJAMAN ---
+                _BuildAvailabilityInfo(book: book, isCurrentBorrower: isCurrentBorrower),
+                const Divider(height: 30),
+
+                // --- TOMBOL AKSI ---
+                if (canToggle)
+                  _BuildActionButton(
+                    book: book, 
+                    isCurrentBorrower: isCurrentBorrower,
+                  ),
+                  
+                const SizedBox(height: 20),
+
+                // Opsi Tambahan (misalnya, Hapus Buku untuk Admin)
+                if (isLibrarian)
+                  _BuildAdminActions(book: book),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
 // ====================================================================
-// WIDGET HELPER BARU (Dibuat sebagai StatelessWidget/ConsumerWidget)
+// WIDGET HELPER BARU (Diambil dari kode sebelumnya)
 // ====================================================================
 
 // --- HEADER SECTION ---
@@ -90,7 +110,7 @@ class _BuildHeaderSection extends StatelessWidget {
             height: 180,
             fit: BoxFit.cover,
             placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            errorWidget: (context, url, error) => const Icon(Icons.book, size: 100),
+            errorWidget: (context, url, error) => Icon(Icons.book, size: 100, color: Theme.of(context).primaryColor),
           ),
         ),
         const SizedBox(width: 20),
@@ -98,11 +118,14 @@ class _BuildHeaderSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(book.title, style: Theme.of(context).textTheme.headlineSmall),
+              Text(book.title, style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              Text('Oleh: ${book.author}', style: Theme.of(context).textTheme.titleMedium),
+              Text('Oleh: ${book.author}', style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey.shade700)),
               const SizedBox(height: 8),
-              Chip(label: Text(book.category), backgroundColor: Colors.blue.shade100),
+              Chip(
+                label: Text(book.category, style: GoogleFonts.poppins()),
+                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+              ),
             ],
           ),
         ),
@@ -122,7 +145,7 @@ class _BuildAvailabilityInfo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Status Ketersediaan', style: Theme.of(context).textTheme.titleLarge),
+        Text('Status Ketersediaan', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -133,7 +156,7 @@ class _BuildAvailabilityInfo extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               book.isAvailable ? 'Tersedia untuk dipinjam' : 'Sedang Dipinjam',
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontWeight: FontWeight.bold,
                 color: book.isAvailable ? Colors.green : Colors.red,
               ),
@@ -143,15 +166,14 @@ class _BuildAvailabilityInfo extends StatelessWidget {
         if (!book.isAvailable && isCurrentBorrower)
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
-            // ✅ PERBAIKAN ERROR 5: Menggunakan .primaryColor
-            child: Text('Anda adalah peminjam buku ini.', style: TextStyle(color: Theme.of(context).primaryColor)), 
+            child: Text('Anda adalah peminjam buku ini.', style: GoogleFonts.poppins(color: Theme.of(context).primaryColor)),
           ),
       ],
     );
   }
 }
 
-// --- TOMBOL AKSI (Membutuhkan ref, jadi ConsumerWidget) ---
+// --- TOMBOL AKSI (Pinjam/Kembalikan) ---
 class _BuildActionButton extends ConsumerWidget {
   final Book book;
   final bool isCurrentBorrower;
@@ -159,49 +181,58 @@ class _BuildActionButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ElevatedButton(
-      onPressed: book.isAvailable || isCurrentBorrower 
-        ? () {
-            ref.read(bookListProvider.notifier).toggleAvailability(book.id);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  book.isAvailable ? 'Berhasil meminjam ${book.title}' : 'Berhasil mengembalikan ${book.title}',
-                ),
-              ),
-            );
-          }
-        : null, 
+    final primaryColor = Theme.of(context).primaryColor;
+
+    return ElevatedButton.icon(
+      icon: Icon(book.isAvailable ? Icons.bookmark_add : Icons.bookmark_remove),
+      onPressed: () {
+        // Menggunakan bookActionProvider untuk memanggil update Firestore
+        ref.read(bookActionProvider.notifier).toggleAvailability(book.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              book.isAvailable ? 'Berhasil meminjam ${book.title}' : 'Berhasil mengembalikan ${book.title}',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: book.isAvailable ? primaryColor : Colors.redAccent,
+          ),
+        );
+        // Kembali ke katalog setelah aksi berhasil
+        Navigator.of(context).pop(); 
+      },
+      label: Text(
+        book.isAvailable ? 'PINJAM SEKARANG' : 'KEMBALIKAN BUKU',
+        style: GoogleFonts.poppins(fontSize: 16),
+      ),
       style: ElevatedButton.styleFrom(
         minimumSize: const Size(double.infinity, 50),
-        backgroundColor: book.isAvailable ? Theme.of(context).primaryColor : Colors.red,
-        foregroundColor: Colors.white,
-      ),
-      child: Text(
-        book.isAvailable ? 'Pinjam Sekarang' : 'Kembalikan Buku',
-        style: const TextStyle(fontSize: 16),
+        backgroundColor: book.isAvailable ? primaryColor : Colors.red,
       ),
     );
   }
 }
 
-// --- ADMIN ACTIONS ---
+// --- AKSI ADMIN (Hapus Buku) ---
 class _BuildAdminActions extends ConsumerWidget {
   final Book book;
   const _BuildAdminActions({required this.book});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return TextButton.icon(
-      icon: const Icon(Icons.delete_forever, color: Colors.red),
-      label: const Text('Hapus Buku dari Katalog', style: TextStyle(color: Colors.red)),
-      onPressed: () {
-        ref.read(bookListProvider.notifier).removeBook(book.id);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${book.title} telah dihapus.')),
-        );
-        Navigator.of(context).pop(); 
-      },
+    return Padding(
+      padding: const EdgeInsets.only(top: 20.0),
+      child: TextButton.icon(
+        icon: const Icon(Icons.delete_forever, color: Colors.red),
+        label: Text('Hapus Buku dari Katalog', style: GoogleFonts.poppins(color: Colors.red)),
+        onPressed: () {
+          // Panggil fungsi removeBook di provider
+          ref.read(bookActionProvider.notifier).removeBook(book.id);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${book.title} telah dihapus.', style: GoogleFonts.poppins())),
+          );
+          Navigator.of(context).pop(); 
+        },
+      ),
     );
   }
 }

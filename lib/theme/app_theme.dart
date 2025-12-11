@@ -1,95 +1,101 @@
 // lib/theme/app_theme.dart
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Tema Terang
+  // Palet Warna Kunci
+  static const Color primaryTeal = Color(0xFF00796B); // Teal Primer (Profesional)
+  static const Color backgroundWhite = Color(0xFFFAFAFA); // Putih Hangat/Pudar
+
   static ThemeData get lightTheme {
-    const primaryColor = Color(0xFF00796B); // Teal 700
+    // Definisi TextTheme menggunakan GoogleFonts (Poppins)
+    final baseTextTheme = GoogleFonts.poppinsTextTheme(); 
 
     return ThemeData(
-      primaryColor: primaryColor,
+      // --- DASAR & WARNA ---
+      primaryColor: primaryTeal,
       colorScheme: ColorScheme.fromSwatch(
         primarySwatch: Colors.teal,
         brightness: Brightness.light,
       ).copyWith(
-        secondary: const Color(0xFF4DB6AC),
-        background: const Color(0xFFF7F7F7),
+        background: backgroundWhite,
         surface: Colors.white,
       ),
-      scaffoldBackgroundColor: const Color(0xFFF7F7F7),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: primaryColor,
+      scaffoldBackgroundColor: backgroundWhite,
+      
+      // --- TYPOGRAPHY ---
+      textTheme: baseTextTheme,
+      
+      // --- WIDGET STYLING ---
+
+      // AppBar (Kontras Tinggi)
+      appBarTheme: AppBarTheme(
+        backgroundColor: primaryTeal,
         foregroundColor: Colors.white,
-        elevation: 1,
+        elevation: 0, 
+        titleTextStyle: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
       ),
+      
+      // Tombol (ElevatedButton)
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
+          backgroundColor: primaryTeal,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), // Sudut yang halus
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
       ),
       
-      // ✅ PERBAIKAN: Menggunakan CardThemeData()
+      // Kartu/Card (Estetik, Shadow Minimalis)
       cardTheme: CardThemeData( 
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        // Anda juga bisa menentukan color di sini jika CardThemeData membutuhkan properti color
+        elevation: 6, 
+        shadowColor: primaryTeal.withOpacity(0.1),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16), 
+          side: BorderSide(color: Colors.grey.shade200, width: 0.5)
+        ),
       ),
       
+      // Input Form (Field Teks)
       inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10), 
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: primaryTeal, width: 2),
+        ),
         filled: true,
-        fillColor: Colors.grey.shade100,
+        fillColor: Colors.white, 
+        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       )
     );
   }
-
-  // Tema Gelap
+  
+  // ✅ PERBAIKAN: Getter darkTheme yang wajib ada untuk MaterialApp.
+  // Kita mengembalikannya sebagai tema Dark default dengan warna primary yang sama.
   static ThemeData get darkTheme {
-    const primaryColor = Color(0xFF4DB6AC); // Teal 300
-
-    return ThemeData(
-      primaryColor: primaryColor,
-      colorScheme: ColorScheme.fromSwatch(
-        primarySwatch: Colors.teal,
-        brightness: Brightness.dark,
-      ).copyWith(
-        secondary: const Color(0xFF26A69A),
-        background: const Color(0xFF121212),
-        surface: const Color(0xFF1E1E1E),
+    return ThemeData.dark().copyWith(
+      primaryColor: primaryTeal,
+      colorScheme: const ColorScheme.dark().copyWith(
+        primary: primaryTeal,
+        secondary: primaryTeal,
       ),
-      scaffoldBackgroundColor: const Color(0xFF121212),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF004D40), // Teal 900
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.grey.shade900,
         foregroundColor: Colors.white,
-        elevation: 1,
+        elevation: 0,
+        titleTextStyle: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
       ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.black,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-        ),
-      ),
-      
-      // ✅ PERBAIKAN: Menggunakan CardThemeData()
-      cardTheme: CardThemeData( 
-        elevation: 2,
-        color: const Color(0xFF1E1E1E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-      
-      inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
-        fillColor: Colors.grey.shade800,
-        hintStyle: const TextStyle(color: Colors.white54),
-        labelStyle: const TextStyle(color: Colors.white70),
-      )
-    );
+      // Jika Anda tidak ingin menyesuaikan widget lain di dark mode, ini sudah cukup.
+    ); 
   }
 }

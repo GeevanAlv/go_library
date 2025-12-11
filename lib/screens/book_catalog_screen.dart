@@ -2,15 +2,15 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart'; 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // ✅ Import yang diperlukan
-import '../theme/app_theme.dart'; 
+import '../theme/app_theme.dart';
 import '../models/book_model.dart';
 import '../providers/book_provider.dart';
 import '../services/auth_service.dart';
-import 'book_detail_screen.dart'; 
+import 'book_detail_screen.dart';
 
 // --- BOOK CATALOG SCREEN ---
 
@@ -29,8 +29,8 @@ class _BookCatalogScreenState extends ConsumerState<BookCatalogScreen> {
   final _categoryController = TextEditingController();
   final _imageUrlController = TextEditingController();
   final _descriptionController = TextEditingController();
-  
-  final _addFormKey = GlobalKey<FormState>(); 
+
+  final _addFormKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
@@ -44,7 +44,7 @@ class _BookCatalogScreenState extends ConsumerState<BookCatalogScreen> {
   }
 
   // --- WIDGET HELPER: DIALOG TAMBAH BUKU (CRUD ADMIN) ---
-  
+
   Future<void> _showAddBookDialog(BuildContext context) async {
     _titleController.clear();
     _authorController.clear();
@@ -56,7 +56,8 @@ class _BookCatalogScreenState extends ConsumerState<BookCatalogScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Tambah Buku Baru", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+          title: Text("Tambah Buku Baru",
+              style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
           content: SingleChildScrollView(
             child: Form(
               key: _addFormKey,
@@ -82,7 +83,8 @@ class _BookCatalogScreenState extends ConsumerState<BookCatalogScreen> {
                   const SizedBox(height: 10),
                   TextFormField(
                     controller: _imageUrlController,
-                    decoration: const InputDecoration(labelText: 'URL Sampul (Opsional)'),
+                    decoration: const InputDecoration(
+                        labelText: 'URL Sampul (Opsional)'),
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
@@ -107,9 +109,13 @@ class _BookCatalogScreenState extends ConsumerState<BookCatalogScreen> {
                     id: '', // ID akan di-generate oleh Firestore
                     title: _titleController.text,
                     author: _authorController.text,
-                    category: _categoryController.text.isEmpty ? 'Umum' : _categoryController.text,
+                    category: _categoryController.text.isEmpty
+                        ? 'Umum'
+                        : _categoryController.text,
                     description: _descriptionController.text,
-                    coverImageUrl: _imageUrlController.text.isEmpty ? 'https://picsum.photos/200/300' : _imageUrlController.text,
+                    coverImageUrl: _imageUrlController.text.isEmpty
+                        ? 'https://picsum.photos/200/300'
+                        : _imageUrlController.text,
                   );
                   // Panggil manager untuk menambahkan buku ke Firestore
                   ref.read(firestoreBookManagerProvider).addBook(newBook);
@@ -122,19 +128,21 @@ class _BookCatalogScreenState extends ConsumerState<BookCatalogScreen> {
       },
     );
   }
-  
+
   // --- WIDGET HELPER: EMPTY STATE ---
-  
+
   Widget _buildEmptyState(String message) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.menu_book, size: 80, color: AppTheme.primaryTeal.withOpacity(0.5)),
+          Icon(Icons.menu_book,
+              size: 80, color: AppTheme.primaryTeal.withOpacity(0.5)),
           const SizedBox(height: 16),
           Text(
             message,
-            style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey.shade700),
+            style:
+                GoogleFonts.poppins(fontSize: 18, color: Colors.grey.shade700),
             textAlign: TextAlign.center,
           ),
         ],
@@ -143,10 +151,11 @@ class _BookCatalogScreenState extends ConsumerState<BookCatalogScreen> {
   }
 
   // --- WIDGET HELPER: BOOK LIST VIEW ---
-  
+
   Widget _buildBookList(List<Book> books, WidgetRef ref, bool isLibrarian) {
     return ListView.builder(
-      padding: const EdgeInsets.only(top: 8.0, bottom: 80.0), // Padding untuk FAB
+      padding:
+          const EdgeInsets.only(top: 8.0, bottom: 80.0), // Padding untuk FAB
       itemCount: books.length,
       itemBuilder: (context, index) {
         final book = books[index];
@@ -154,7 +163,7 @@ class _BookCatalogScreenState extends ConsumerState<BookCatalogScreen> {
       },
     );
   }
-  
+
   // --- WIDGET HELPER: SEARCH BAR ---
 
   Widget _buildSearchBar() {
@@ -181,19 +190,20 @@ class _BookCatalogScreenState extends ConsumerState<BookCatalogScreen> {
   }
 
   // --- LOGIKA UTAMA BUILD ---
-  
+
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(authStateProvider).value;
-    final filteredBooksAsync = ref.watch(filteredBookListProvider); 
+    final filteredBooksAsync = ref.watch(filteredBookListProvider);
     final isLibrarian = currentUser?.email == 'admin@library.com';
-    
+
     // Dapatkan nilai String query secara langsung
     final currentQuery = ref.watch(searchQueryProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Katalog Buku', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        title: Text('Katalog Buku',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -205,7 +215,7 @@ class _BookCatalogScreenState extends ConsumerState<BookCatalogScreen> {
           child: _buildSearchBar(),
         ),
       ),
-      
+
       // Menggunakan .when() untuk menangani status data Firestore (Loading, Data, Error)
       body: filteredBooksAsync.when(
         data: (books) {
@@ -215,9 +225,10 @@ class _BookCatalogScreenState extends ConsumerState<BookCatalogScreen> {
 
           // Cek hasil pencarian atau katalog kosong
           if (books.isEmpty && currentQuery.isNotEmpty) {
-            return _buildEmptyState("Tidak ada buku yang cocok dengan kueri: '$currentQuery'.");
+            return _buildEmptyState(
+                "Tidak ada buku yang cocok dengan kueri: '$currentQuery'.");
           }
-          
+
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -225,26 +236,28 @@ class _BookCatalogScreenState extends ConsumerState<BookCatalogScreen> {
               _buildStatsCard(context, totalAvailable, totalBorrowed),
 
               Expanded(
-                child: books.isEmpty 
+                child: books.isEmpty
                     ? _buildEmptyState("Katalog buku kosong.")
                     : _buildBookList(books, ref, isLibrarian),
               ),
             ],
           );
         },
-        
-        loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal)),
-        error: (e, s) => Center(child: Text('Gagal memuat katalog: ${e.toString()}', style: GoogleFonts.poppins(color: Colors.red))),
+        loading: () => const Center(
+            child: CircularProgressIndicator(color: AppTheme.primaryTeal)),
+        error: (e, s) => Center(
+            child: Text('Gagal memuat katalog: ${e.toString()}',
+                style: GoogleFonts.poppins(color: Colors.red))),
       ),
-      
-      floatingActionButton: isLibrarian 
-        ? FloatingActionButton.extended(
-            onPressed: () => _showAddBookDialog(context),
-            icon: const Icon(Icons.add),
-            label: const Text('Tambah Buku'),
-            backgroundColor: AppTheme.primaryTeal,
-          )
-        : null,
+
+      floatingActionButton: isLibrarian
+          ? FloatingActionButton.extended(
+              onPressed: () => _showAddBookDialog(context),
+              icon: const Icon(Icons.add),
+              label: const Text('Tambah Buku'),
+              backgroundColor: AppTheme.primaryTeal,
+            )
+          : null,
     );
   }
 
@@ -296,7 +309,11 @@ class _StatItem extends StatelessWidget {
   final int count;
   final Color color;
 
-  const _StatItem({required this.icon, required this.label, required this.count, required this.color});
+  const _StatItem(
+      {required this.icon,
+      required this.label,
+      required this.count,
+      required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -304,8 +321,12 @@ class _StatItem extends StatelessWidget {
       children: [
         Icon(icon, color: color, size: 30),
         const SizedBox(height: 4),
-        Text('$count', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-        Text(label, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey.shade700)),
+        Text('$count',
+            style: GoogleFonts.poppins(
+                fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+        Text(label,
+            style:
+                GoogleFonts.poppins(fontSize: 12, color: Colors.grey.shade700)),
       ],
     );
   }
@@ -316,12 +337,14 @@ class BookListTile extends ConsumerWidget {
   final Book book;
   final bool isLibrarian;
 
-  const BookListTile({super.key, required this.book, required this.isLibrarian});
+  const BookListTile(
+      {super.key, required this.book, required this.isLibrarian});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUserId = ref.watch(authStateProvider).value?.uid;
-    final canToggle = book.isAvailable || (book.borrowerId == currentUserId) || isLibrarian;
+    final canToggle =
+        isLibrarian && (book.isAvailable || (book.borrowerId == currentUserId));
     final isCurrentlyBorrowed = book.borrowerId != null;
     final primaryColor = Theme.of(context).primaryColor;
 
@@ -331,30 +354,21 @@ class BookListTile extends ConsumerWidget {
         contentPadding: const EdgeInsets.all(12),
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8.0),
-          child: CachedNetworkImage( 
+          child: CachedNetworkImage(
             imageUrl: book.coverImageUrl,
             width: 60,
             height: 80,
             fit: BoxFit.cover,
-            placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            errorWidget: (context, url, error) => Icon(Icons.book, size: 50, color: primaryColor),
+            placeholder: (context, url) =>
+                const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            errorWidget: (context, url, error) =>
+                Icon(Icons.book, size: 50, color: primaryColor),
           ),
         ),
-        title: Text(book.title, style: GoogleFonts.poppins(fontWeight: FontWeight.w600), maxLines: 2, overflow: TextOverflow.ellipsis),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(book.author, style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey.shade600)),
-            const SizedBox(height: 6),
-            Text(
-              book.isAvailable ? 'Tersedia' : 'Dipinjam',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold, 
-                color: book.isAvailable ? Colors.green.shade700 : Colors.red.shade700
-              ),
-            ),
-          ],
-        ),
+        title: Text(book.title,
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis),
         trailing: canToggle
             ? IconButton(
                 icon: Icon(
@@ -363,22 +377,28 @@ class BookListTile extends ConsumerWidget {
                   size: 28,
                 ),
                 onPressed: () {
-                  ref.read(bookActionProvider.notifier).toggleAvailability(book.id);
+                  ref
+                      .read(bookActionProvider.notifier)
+                      .toggleAvailability(book.id);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        book.isAvailable ? 'Meminjam ${book.title}' : 'Mengembalikan ${book.title}',
+                        book.isAvailable
+                            ? 'Meminjam ${book.title}'
+                            : 'Mengembalikan ${book.title}',
                         style: GoogleFonts.poppins(),
                       ),
-                      backgroundColor: book.isAvailable ? primaryColor : Colors.redAccent,
+                      backgroundColor:
+                          book.isAvailable ? primaryColor : Colors.redAccent,
                     ),
                   );
                 },
               )
-            : isCurrentlyBorrowed
-              ? const Icon(Icons.lock_outline, color: Colors.grey)
-              : null,
-        
+            : !isLibrarian && book.isAvailable
+                ? const Icon(Icons.info_outline, color: Colors.grey, size: 20)
+                : isCurrentlyBorrowed
+                    ? const Icon(Icons.lock_outline, color: Colors.grey)
+                    : null,
         onTap: () {
           Navigator.push(
             context,
@@ -387,6 +407,23 @@ class BookListTile extends ConsumerWidget {
             ),
           );
         },
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(book.author,
+                style: GoogleFonts.poppins(
+                    fontSize: 13, color: Colors.grey.shade600)),
+            const SizedBox(height: 6),
+            Text(
+              book.isAvailable ? 'Tersedia' : 'Dipinjam',
+              style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.bold,
+                  color: book.isAvailable
+                      ? Colors.green.shade700
+                      : Colors.red.shade700),
+            ),
+          ],
+        ),
       ),
     );
   }

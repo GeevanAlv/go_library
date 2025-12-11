@@ -7,15 +7,17 @@ class Book {
   final String description;
   final String coverImageUrl; // URL gambar sampul
   final String category; // Misal: Fiksi, Sains, Sejarah
-  final bool isAvailable; // Status ketersediaan (Tersedia/Dipinjam)
-  final String? borrowerId; // UID pengguna yang meminjam buku (null jika tersedia)
+  final bool isAvailable;
+  // Status ketersediaan (Tersedia/Dipinjam)
+  final String?
+      borrowerId; // UID pengguna yang meminjam buku (null jika tersedia)
 
   Book({
     required this.id,
     required this.title,
     required this.author,
     this.description = 'Deskripsi belum tersedia.',
-    this.coverImageUrl = 'https://picsum.photos/200/300', 
+    this.coverImageUrl = 'https://picsum.photos/200/300',
     required this.category,
     this.isAvailable = true,
     this.borrowerId,

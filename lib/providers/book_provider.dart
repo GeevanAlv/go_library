@@ -48,6 +48,17 @@ class FirestoreBookManager {
       'borrowerId': borrowerId,
     });
   }
+
+  // Mengupdate data buku (Edit Buku)
+  Future<void> updateBook(String bookId, Book book) async {
+    await _firestore.collection('books').doc(bookId).update({
+      'title': book.title,
+      'author': book.author,
+      'category': book.category,
+      'description': book.description,
+      'coverImageUrl': book.coverImageUrl,
+    });
+  }
 }
 
 // --- 2. LOGIKA PINJAM/KEMBALI (Menggunakan Manager) ---
@@ -67,17 +78,21 @@ class BookNotifier extends StateNotifier<AsyncValue<List<Book>>> {
     final book = books.firstWhere((b) => b.id == bookId);
 
     if (book.isAvailable) {
-        // PINJAM
-        if (currentUserId == null) return;
+        // PINJAM - hanya admin
+        if (currentUser?.email != 'admin@library.com') return;
         await bookManager.updateAvailability(bookId, false, currentUserId);
-    } else if (book.borrowerId == currentUserId || currentUser?.email == 'admin@library.com') {
-        // KEMBALIKAN (oleh peminjam atau admin)
+    } else if (currentUser?.email == 'admin@library.com') {
+        // KEMBALIKAN - hanya admin
         await bookManager.updateAvailability(bookId, true, null);
     }
   }
 
   void removeBook(String bookId) async {
     await ref.read(firestoreBookManagerProvider)._firestore.collection('books').doc(bookId).delete();
+  }
+
+  void updateBook(String bookId, Book book) async {
+    await ref.read(firestoreBookManagerProvider).updateBook(bookId, book);
   }
 }
 

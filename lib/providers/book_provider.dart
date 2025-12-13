@@ -1,160 +1,93 @@
-// lib/providers/book_provider.dart (INTEGRASI FIRESTORE & LOGIKA PINJAM)
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/book_model.dart';
-import '../services/auth_service.dart';
 
-// --- 1. FIRESTORE MANAGER CLASS ---
+final firebaseFirestore = FirebaseFirestore.instance;
 
-class FirestoreBookManager {
-  final _firestore = FirebaseFirestore.instance;
+// 1. STREAM: Ambil Semua Data Buku (Raw Data)
+final bookListStreamProvider = StreamProvider<List<Book>>((ref) {
+  return firebaseFirestore.collection('books').snapshots().map((snapshot) {
+    return snapshot.docs.map((doc) => Book.fromFirestore(doc)).toList();
+  });
+});
 
-  Stream<List<Book>> getBooksStream() {
-    // Mengambil data dari koleksi 'books' secara real-time
-    return _firestore.collection('books').snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return Book(
-          id: doc.id, 
-          title: doc['title'] ?? 'N/A',
-          author: doc['author'] ?? 'N/A',
-          description: doc['description'] ?? 'Deskripsi kosong',
-          category: doc['category'] ?? 'Umum',
-          coverImageUrl: doc['coverImageUrl'] ?? 'https://picsum.photos/200/300',
-          isAvailable: doc['isAvailable'] ?? true,
-          borrowerId: doc['borrowerId'], 
-        );
-      }).toList();
-    });
-  }
+// 2. STATE: Menyimpan Kata Kunci Pencarian User
+final searchQueryProvider = StateProvider<String>((ref) => '');
 
-  // Menambah Buku Baru (Admin)
+// 3. LOGIC: Filter Buku Berdasarkan Pencarian (Ini yang dicari error tadi)
+final filteredBookListProvider = Provider<AsyncValue<List<Book>>>((ref) {
+  final searchQuery = ref.watch(searchQueryProvider).toLowerCase();
+  final booksAsync = ref.watch(bookListStreamProvider);
+
+  return booksAsync.whenData((books) {
+    if (searchQuery.isEmpty) {
+      return books;
+    }
+    // Filter berdasarkan Judul atau Penulis
+    return books.where((book) {
+      return book.title.toLowerCase().contains(searchQuery) ||
+             book.author.toLowerCase().contains(searchQuery);
+    }).toList();
+  });
+});
+
+// 4. DETAIL: Ambil 1 Buku berdasarkan ID
+final bookByIdProvider = StreamProvider.family<Book, String>((ref, id) {
+  return firebaseFirestore.collection('books').doc(id).snapshots().map((doc) {
+    if (!doc.exists) throw Exception("Buku tidak ditemukan");
+    return Book.fromFirestore(doc);
+  });
+});
+
+// 5. ACTION: Tambah/Edit/Hapus (Book Manager)
+// (Sebelumnya mungkin Anda namakan firestoreBookManagerProvider, kita standarkan jadi bookActionProvider)
+class BookActionNotifier extends StateNotifier<bool> {
+  BookActionNotifier() : super(false); 
+
   Future<void> addBook(Book book) async {
-    await _firestore.collection('books').add({
-      'title': book.title,
-      'author': book.author,
-      'category': book.category,
-      'description': book.description,
-      'coverImageUrl': book.coverImageUrl,
-      'isAvailable': true,
-      'borrowerId': null,
-    });
-  }
-
-  // Mengubah Status Ketersediaan (Peminjaman/Pengembalian)
-  Future<void> updateAvailability(String bookId, bool isAvailable, String? borrowerId) async {
-    await _firestore.collection('books').doc(bookId).update({
-      'isAvailable': isAvailable,
-      'borrowerId': borrowerId,
-    });
-  }
-
-  // Mengupdate data buku (Edit Buku)
-  Future<void> updateBook(String bookId, Book book) async {
-    await _firestore.collection('books').doc(bookId).update({
-      'title': book.title,
-      'author': book.author,
-      'category': book.category,
-      'description': book.description,
-      'coverImageUrl': book.coverImageUrl,
-    });
-  }
-}
-
-// --- 2. LOGIKA PINJAM/KEMBALI (Menggunakan Manager) ---
-
-class BookNotifier extends StateNotifier<AsyncValue<List<Book>>> {
-  final Ref ref;
-  BookNotifier(this.ref) : super(const AsyncValue.loading());
-
-  void toggleAvailability(String bookId) async {
-    final bookManager = ref.read(firestoreBookManagerProvider);
-    final currentUser = ref.read(authStateProvider).value; 
-    final currentUserId = currentUser?.uid;
-
-    if (state.value == null) return;
-
-    final books = state.value!;
-    final book = books.firstWhere((b) => b.id == bookId);
-
-    if (book.isAvailable) {
-        // PINJAM - hanya admin
-        if (currentUser?.email != 'admin@library.com') return;
-        await bookManager.updateAvailability(bookId, false, currentUserId);
-    } else if (currentUser?.email == 'admin@library.com') {
-        // KEMBALIKAN - hanya admin
-        await bookManager.updateAvailability(bookId, true, null);
+    state = true;
+    try {
+      final docRef = firebaseFirestore.collection('books').doc();
+      final newBook = Book(
+        id: docRef.id,
+        title: book.title,
+        author: book.author,
+        description: book.description,
+        category: book.category,
+        coverImageUrl: book.coverImageUrl,
+        stock: book.stock, // Pastikan stok tersimpan
+      );
+      await docRef.set(newBook.toJson());
+    } catch (e) {
+      rethrow;
+    } finally {
+      state = false;
     }
   }
 
-  void removeBook(String bookId) async {
-    await ref.read(firestoreBookManagerProvider)._firestore.collection('books').doc(bookId).delete();
+  Future<void> updateBook(String id, Book book) async {
+    state = true;
+    try {
+      await firebaseFirestore.collection('books').doc(id).update(book.toJson());
+    } catch (e) {
+      rethrow;
+    } finally {
+      state = false;
+    }
   }
 
-  void updateBook(String bookId, Book book) async {
-    await ref.read(firestoreBookManagerProvider).updateBook(bookId, book);
+  Future<void> removeBook(String id) async {
+    state = true;
+    try {
+      await firebaseFirestore.collection('books').doc(id).delete();
+    } catch (e) {
+      rethrow;
+    } finally {
+      state = false;
+    }
   }
 }
 
-// --- 3. PROVIDER RIVERPOD ---
-
-final firestoreBookManagerProvider = Provider((ref) => FirestoreBookManager());
-
-// Stream data dari Firestore (AsyncValue<List<Book>>)
-final bookListStreamProvider = StreamProvider<List<Book>>((ref) {
-  return ref.watch(firestoreBookManagerProvider).getBooksStream();
+final bookActionProvider = StateNotifierProvider<BookActionNotifier, bool>((ref) {
+  return BookActionNotifier();
 });
-
-// State untuk menampung input pencarian
-final searchQueryProvider = StateProvider<String>((ref) => '');
-
-// Filtered List Provider
-final filteredBookListProvider = Provider<AsyncValue<List<Book>>>((ref) {
-  final bookListAsync = ref.watch(bookListStreamProvider);
-  final query = ref.watch(searchQueryProvider).toLowerCase();
-
-  return bookListAsync.when(
-    data: (books) {
-      if (query.isEmpty) {
-        return AsyncValue.data(books);
-      }
-      final filteredList = books.where((book) {
-        return book.title.toLowerCase().contains(query) ||
-               book.author.toLowerCase().contains(query);
-      }).toList();
-      return AsyncValue.data(filteredList);
-    },
-    loading: () => const AsyncValue.loading(),
-    error: (e, s) => AsyncValue.error(e, s),
-  );
-});
-
-// Provider untuk mendapatkan satu buku berdasarkan ID
-final bookByIdProvider = Provider.family<AsyncValue<Book>, String>((ref, id) {
-  final bookListAsync = ref.watch(bookListStreamProvider);
-  
-  return bookListAsync.when(
-    data: (books) {
-      try {
-        final book = books.firstWhere((book) => book.id == id);
-        return AsyncValue.data(book);
-      } catch (e) {
-        return AsyncValue.error('Buku tidak ditemukan', StackTrace.current);
-      }
-    },
-    loading: () => const AsyncValue.loading(),
-    error: (e, s) => AsyncValue.error(e, s),
-  );
-});
-
-// Provider untuk Aksi Pinjam/Kembali
-final bookActionProvider = StateNotifierProvider<BookNotifier, AsyncValue<List<Book>>>(
-  (ref) {
-    final notifier = BookNotifier(ref);
-    // Langganan stream untuk memastikan notifier memiliki state terbaru
-    ref.listen(bookListStreamProvider, (_, next) {
-      notifier.state = next;
-    });
-    return notifier;
-  },
-);

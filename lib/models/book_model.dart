@@ -1,50 +1,70 @@
-// lib/models/book_model.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Book {
   final String id;
   final String title;
   final String author;
   final String description;
-  final String coverImageUrl; // URL gambar sampul
-  final String category; // Misal: Fiksi, Sains, Sejarah
+  final String category;
+  final String coverImageUrl;
   final bool isAvailable;
-  // Status ketersediaan (Tersedia/Dipinjam)
-  final String?
-      borrowerId; // UID pengguna yang meminjam buku (null jika tersedia)
+  final String? borrowerId;
+  // 👇 INI PERBAIKANNYA: Tambah variabel stock
+  final int stock; 
 
   Book({
     required this.id,
     required this.title,
     required this.author,
-    this.description = 'Deskripsi belum tersedia.',
-    this.coverImageUrl = 'https://picsum.photos/200/300',
+    required this.description,
     required this.category,
+    required this.coverImageUrl,
     this.isAvailable = true,
     this.borrowerId,
+    // 👇 Wajib diisi
+    required this.stock, 
   });
 
-  // Method untuk membuat salinan (copy) objek dengan perubahan properti tertentu.
-  // Ini penting untuk Riverpod (immutable state).
-  Book copyWith({
-    String? id,
-    String? title,
-    String? author,
-    String? description,
-    String? coverImageUrl,
-    String? category,
-    bool? isAvailable,
-    String? borrowerId,
-  }) {
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'author': author,
+      'description': description,
+      'category': category,
+      'coverImageUrl': coverImageUrl,
+      'isAvailable': isAvailable,
+      'borrowerId': borrowerId,
+      'stock': stock, // Simpan ke database
+    };
+  }
+
+  factory Book.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return Book(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      author: author ?? this.author,
-      description: description ?? this.description,
-      coverImageUrl: coverImageUrl ?? this.coverImageUrl,
-      category: category ?? this.category,
-      // Jika isAvailable diubah, borrowerId harus disesuaikan
-      isAvailable: isAvailable ?? this.isAvailable,
-      borrowerId: (isAvailable == true) ? null : borrowerId ?? this.borrowerId,
+      id: doc.id,
+      title: data['title'] ?? '',
+      author: data['author'] ?? '',
+      description: data['description'] ?? '',
+      category: data['category'] ?? '',
+      coverImageUrl: data['coverImageUrl'] ?? '',
+      isAvailable: data['isAvailable'] ?? true,
+      borrowerId: data['borrowerId'],
+      stock: data['stock'] ?? 0, // Baca dari database (default 0)
+    );
+  }
+
+  factory Book.fromJson(Map<String, dynamic> json) {
+    return Book(
+      id: json['id'] ?? '',
+      title: json['title'] ?? '',
+      author: json['author'] ?? '',
+      description: json['description'] ?? '',
+      category: json['category'] ?? '',
+      coverImageUrl: json['coverImageUrl'] ?? '',
+      isAvailable: json['isAvailable'] ?? true,
+      borrowerId: json['borrowerId'],
+      stock: json['stock'] ?? 0,
     );
   }
 }

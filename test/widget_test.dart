@@ -1,31 +1,37 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// test/widget_test.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:go_library/main.dart';
-import 'package:go_library/models/book_model.dart';
+// Import layar Login Anda
+import 'package:go_library/screens/auth/login_screen.dart'; 
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const BookCatalogApp());
+  testWidgets('Smoke test: Halaman Login muncul dengan benar', (WidgetTester tester) async {
+    // 1. Build Halaman Login dalam lingkungan test.
+    // Kita HARUS membungkusnya dengan ProviderScope karena aplikasi menggunakan Riverpod.
+    // Kita juga butuh MaterialApp agar widget Scaffold bisa bekerja.
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: LoginScreen(),
+        ),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // 2. Verifikasi bahwa elemen-elemen Login muncul di layar.
+    
+    // Cek apakah teks tombol "MASUK" ada
+    expect(find.text('MASUK'), findsOneWidget);
+    
+    // Cek apakah teks tombol "DAFTAR" TIDAK ada (karena defaultnya mode login)
+    expect(find.text('DAFTAR'), findsNothing);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Cek apakah ada 2 kotak input (Email dan Password)
+    expect(find.byType(TextField), findsNWidgets(2));
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Cek apakah Ikon Buku muncul
+    expect(find.byIcon(Icons.library_books), findsOneWidget);
   });
 }

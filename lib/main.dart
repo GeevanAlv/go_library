@@ -1,92 +1,72 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-// WAJIB: File ini harus ada setelah menjalankan 'flutterfire configure'
-import 'package:go_library/firebase_options.dart'; 
+// ✅ IMPORT FILE KONFIGURASI FIREBASE
+import 'firebase_options.dart'; 
 
-import 'services/auth_service.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/book_catalog_screen.dart'; 
+// ✅ IMPORT SCREEN (Sesuaikan dengan folder terbaru)
+import 'screens/auth/login_screen.dart'; 
+import 'screens/main_navigation_screen.dart'; 
+
+// ✅ IMPORT THEME
 import 'theme/app_theme.dart'; 
 
 void main() async {
-  // Pastikan binding Flutter diinisialisasi sebelum memanggil native code
   WidgetsFlutterBinding.ensureInitialized();
   
-  // 1. Inisialisasi Firebase Core (Penting untuk semua layanan Firebase)
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    ); 
-  } catch (e) {
-    // Ini penting jika terjadi error inisialisasi pada platform tertentu (misalnya Web)
-    print("Error initializing Firebase: $e");
-  }
-  
-  // 2. Memulai Aplikasi dengan ProviderScope (Wajib untuk Riverpod)
-  runApp(const ProviderScope(child: BookCatalogApp()));
+  // Inisialisasi Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Jalankan App dengan ProviderScope (Wajib untuk Riverpod)
+  runApp(const ProviderScope(child: MyApp()));
 }
 
-class BookCatalogApp extends StatelessWidget {
-  const BookCatalogApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Katalog Perpustakaan',
+      debugShowCheckedModeBanner: false, // Hilangkan pita Debug merah
+      title: 'Go Library',
+      theme: AppTheme.lightTheme, // Gunakan tema teal yang sudah dibuat
       
-      // Menggunakan tema estetik yang baru kita buat
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      
-      // ✅ Penting: Memaksa aplikasi untuk selalu menggunakan Light Theme (Tema Terang)
-      themeMode: ThemeMode.light, 
-      
-      home: const MainRouter(),
+      // 👇 AuthWrapper: Mengecek apakah user login atau belum
+      home: const AuthWrapper(),
     );
   }
 }
 
-// Router utama yang menangani status login/logout secara reaktif
-class MainRouter extends ConsumerWidget {
-  const MainRouter({super.key});
+// ==========================================
+// WIDGET PENGECEK STATUS LOGIN (AuthWrapper)
+// ==========================================
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Amati status autentikasi dari StreamProvider
-    final authState = ref.watch(authStateProvider);
-    // 
-
-    return authState.when(
-      // Data telah tersedia (user terdeteksi atau tidak)
-      data: (user) {
-        if (user != null) {
-          // Jika sudah login, tampilkan katalog
-          return const BookCatalogScreen(); 
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // 1. Jika sedang loading (koneksi lambat)
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
-        // Jika belum login, tampilkan layar login
+
+        // 2. Jika User Ada (Sudah Login) -> Masuk ke Menu Utama
+        if (snapshot.hasData) {
+          // ⚠️ PENTING: Jangan pakai 'const' di sini agar tidak error
+          return const MainNavigationScreen(); 
+        }
+
+        // 3. Jika User Kosong (Belum Login) -> Masuk ke Login
+        // ⚠️ PENTING: Jangan pakai 'const' di sini agar tidak error
         return const LoginScreen();
       },
-      
-      // Menunggu respons pertama dari Firebase Auth
-      loading: () => const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(color: AppTheme.primaryTeal),
-        ),
-      ),
-      
-      // Jika terjadi kesalahan fatal pada stream auth
-      error: (err, stack) => Scaffold(
-        body: Center(
-          child: Text(
-            'Error Autentikasi Fatal: ${err.toString()}', 
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
     );
   }
 }

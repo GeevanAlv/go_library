@@ -5,43 +5,63 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../providers/book_provider.dart';
 import '../models/book_model.dart';
-import '../services/auth_service.dart'; // Untuk cek admin
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'book_detail_screen.dart';
+import 'ai_search_screen.dart'; // Tetap perlu import untuk tombol AI
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Gunakan Provider yang sudah difilter (Search Logic)
     final booksAsync = ref.watch(filteredBookListProvider);
     final searchQuery = ref.watch(searchQueryProvider);
     
-    // Cek Admin (Ganti email sesuai admin Anda)
+    // Cek status admin untuk FAB (Tombol Tambah Buku di bawah kanan)
     final currentUser = ref.watch(authStateProvider).value;
     final isAdmin = currentUser?.email == 'admin@library.com';
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         title: const Text("Katalog Buku"),
         actions: [
-          // Tombol Refresh / Reset Search
+          // 1. Tombol AI (Tetap ada biar mudah akses)
+          IconButton(
+            icon: const Icon(Icons.auto_awesome, color: Colors.yellowAccent),
+            tooltip: "AI Assistant",
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AISearchScreen()));
+            },
+          ),
+
+          // --- BAGIAN INI SUDAH DIHAPUS (Monitor & Pinjaman) ---
+          // Karena sudah ada di menu bawah (Bottom Navigation)
+
+          // 2. Tombol Refresh
           IconButton(
             icon: const Icon(Icons.refresh),
+            tooltip: "Refresh Data",
             onPressed: () => ref.read(searchQueryProvider.notifier).state = '',
-          )
+          ),
+          
+          // 3. Tombol Logout
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: "Keluar Akun",
+            onPressed: () => _showLogoutDialog(context, ref),
+          ),
         ],
       ),
       body: Column(
         children: [
-          // --- 1. SEARCH BAR ---
+          // --- SEARCH BAR ---
           Container(
             padding: const EdgeInsets.all(16),
             color: AppTheme.primaryTeal,
             child: TextField(
               onChanged: (value) {
-                // Update state pencarian realtime
                 ref.read(searchQueryProvider.notifier).state = value;
               },
               decoration: InputDecoration(
@@ -59,7 +79,7 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
 
-          // --- 2. LIST BUKU ---
+          // --- LIST BUKU ---
           Expanded(
             child: booksAsync.when(
               data: (books) {
@@ -81,12 +101,11 @@ class HomeScreen extends ConsumerWidget {
                   );
                 }
                 
-                // Tampilan Grid Buku
                 return GridView.builder(
                   padding: const EdgeInsets.all(16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2, // 2 Kolom
-                    childAspectRatio: 0.65, // Rasio Lebar:Tinggi Kartu
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.65,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
                   ),
@@ -104,7 +123,7 @@ class HomeScreen extends ConsumerWidget {
         ],
       ),
       
-      // --- 3. FAB TAMBAH BUKU (Hanya Admin) ---
+      // --- FAB TAMBAH BUKU (Hanya Admin) ---
       floatingActionButton: isAdmin ? FloatingActionButton(
         backgroundColor: AppTheme.primaryTeal,
         onPressed: () => _showAddBookDialog(context, ref),
@@ -113,6 +132,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
+  // --- WIDGET CARD BUKU ---
   Widget _buildBookCard(BuildContext context, Book book) {
     return GestureDetector(
       onTap: () {
@@ -132,7 +152,6 @@ class HomeScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Gambar Cover
             Expanded(
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
@@ -145,7 +164,6 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            // Info Buku
             Padding(
               padding: const EdgeInsets.all(10),
               child: Column(
@@ -165,7 +183,6 @@ class HomeScreen extends ConsumerWidget {
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   const SizedBox(height: 6),
-                  // Indikator Stok Kecil
                   Row(
                     children: [
                       Container(
@@ -194,14 +211,34 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  // --- DIALOG TAMBAH BUKU ---
+  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Konfirmasi Keluar"),
+        content: const Text("Apakah Anda yakin ingin keluar dari aplikasi?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Batal")),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(authServiceProvider).signOut();
+            },
+            child: const Text("Keluar", style: TextStyle(color: Colors.white)),
+          )
+        ],
+      ),
+    );
+  }
+
   void _showAddBookDialog(BuildContext context, WidgetRef ref) {
     final titleC = TextEditingController();
     final authorC = TextEditingController();
     final descC = TextEditingController();
     final imageC = TextEditingController();
     final categoryC = TextEditingController();
-    final stockC = TextEditingController(); // Controller Stok
+    final stockC = TextEditingController();
 
     showDialog(
       context: context,
@@ -224,17 +261,16 @@ class HomeScreen extends ConsumerWidget {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Batal")),
           ElevatedButton(
             onPressed: () {
-              // Validasi Sederhana
               if (titleC.text.isEmpty || stockC.text.isEmpty) return;
 
               final newBook = Book(
-                id: '', // ID akan digenerate di provider
+                id: '', 
                 title: titleC.text,
                 author: authorC.text,
                 description: descC.text,
                 category: categoryC.text,
                 coverImageUrl: imageC.text,
-                stock: int.tryParse(stockC.text) ?? 0, // ✅ INI YANG BIKIN ERROR TADI (Sekarang sudah ada)
+                stock: int.tryParse(stockC.text) ?? 0, 
               );
 
               ref.read(bookActionProvider.notifier).addBook(newBook);
